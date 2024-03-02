@@ -28,14 +28,16 @@ from llama_index.storage.storage_context import StorageContext
 # llamaindex has a special class that does this for you
 # it pulls every object in a given collection
 
-def process_entries(client):
-    collection = client[os.getenv("MONGODB_DATABASE")][os.getenv("MONGODB_COLLECTION")]
+def process_entries(client, database_name, collection_name, vector_collection_name, vector_index_name):
+    # connect to Atlas as a vector store
+    
     query_dict = {"processed": False}
+    collection = client[database_name][collection_name]
     unprocessed_entries = collection.find(query_dict)
     reader = SimpleMongoReader(uri=os.getenv("MONGODB_URI"))
     documents = reader.load_data(
-        os.getenv("MONGODB_DATABASE"),
-        os.getenv("MONGODB_COLLECTION"), # this is the collection where the objects you loaded in 1_import got stored
+        database_name,
+        collection_name, # this is the collection where the objects you loaded in 1_import got stored
         # field_names=["saleDate", "items", "storeLocation", "customer", "couponUsed", "purchaseMethod"], # these is a list of the top-level fields in your objects that will be indexed
         field_names=["text"],                               # make sure your objects have a field called "full_text" or that you change this value
         query_dict=query_dict # this is a mongo query dict that will filter your data if you don't want to index everything
@@ -43,9 +45,9 @@ def process_entries(client):
 
     store = MongoDBAtlasVectorSearch(
         client,
-        db_name=os.getenv('MONGODB_DATABASE'),
-        collection_name=os.getenv('MONGODB_VECTORS'), # this is where your embeddings will be stored
-        index_name=os.getenv('MONGODB_VECTOR_INDEX') # this is the name of the index you will need to create
+        db_name=database_name, # this is the database where you stored your embeddings
+        collection_name=vector_collection_name, # this is where your embeddings will be stored
+        index_name=vector_index_name # this is the name of the index you will need to create
     )
     # # create Atlas as a vector store
     # now create an index from all the Documents and store them in Atlas
